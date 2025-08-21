@@ -1,7 +1,7 @@
 # AWS Well-Architected Framework Review (WAFR) with Generative AI
 
 This repo demonstrates a POC for accelerating AWS WAFR using Generative AI.  
-Base repo: [AWS Sample](https://github.com/aws-samples/sample-well-architected-acceleration-with-generative-ai)
+Base repo: [AWS WAFR With Gen Ai](https://github.com/aws-samples/sample-well-architected-acceleration-with-generative-ai)
 
 ### Changes Made
 - Updated model from **Claude 3.5** to **DeepSeek R1**  
