@@ -27,7 +27,7 @@ if st.sidebar.button('Logout'):
 dotenv.load_dotenv()
 
 client = boto3.client("bedrock-runtime", region_name = "{{REGION}}")
-model_id = "arn:aws:bedrock:us-west-2:706769905020:us.deepseek.r1-v1:0" 
+model_id = "deepseek.r1-v1:0" 
 
 
 def load_data():
