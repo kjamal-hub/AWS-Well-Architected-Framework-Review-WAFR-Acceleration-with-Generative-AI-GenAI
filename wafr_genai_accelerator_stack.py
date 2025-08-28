@@ -672,7 +672,7 @@ class WafrGenaiAcceleratorStack(Stack):
             memory_size=512,
             environment={
                 "KNOWLEDGE_BASE_ID": KB_ID,
-                "LLM_MODEL_ID": "deepseek.r1-v1:0",
+                "LLM_MODEL_ID": "meta.llama4-maverick-17b-instruct-v1:0",
                 "REGION": Stack.of(self).region, 
                 "UPLOAD_BUCKET_NAME": userUploadBucket.bucket_name,
                 "WAFR_ACCELERATOR_RUNS_DD_TABLE_NAME": WAFR_RUNS_TABLE,
@@ -861,7 +861,7 @@ class WafrGenaiAcceleratorStack(Stack):
             memory_size=512,
             environment={
                 "KNOWLEDGE_BASE_ID": KB_ID,
-                "LLM_MODEL_ID": "deepseek.r1-v1:0",
+                "LLM_MODEL_ID": "meta.llama4-maverick-17b-instruct-v1:0",
                 "REGION": Stack.of(self).region,
                 "UPLOAD_BUCKET_NAME": userUploadBucket.bucket_name,
                 "WAFR_ACCELERATOR_RUNS_DD_TABLE_NAME": WAFR_RUNS_TABLE,
