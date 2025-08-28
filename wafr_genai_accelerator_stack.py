@@ -291,12 +291,10 @@ class WafrGenaiAcceleratorStack(Stack):
         WAFR_PILLAR_QUESTIONS_PROMPT_TABLE = wafrPillarQuestionPromptsTable.table_name
         
         # Create an IAM role for the insertWafrPromptsFunctionRole Lambda function
-        insertWafrPromptsFunctionRole = iam.Role(
-            self, "LambdaRole",
-            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
-            managed_policies=[
-                iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole")
-            ]
+        insertWafrPromptsFunctionRole = iam.Role.from_role_arn(
+            self,
+            "ExistingInsertLambdaRole-" + entryTimestamp,
+            role_arn="arn:aws:iam::706769905020:role/Lambda-Full-Access-Role"
         )
         
         insertWafrPromptsFunction = _lambda.Function(self, "insertWAFRPrompts",
@@ -362,127 +360,10 @@ class WafrGenaiAcceleratorStack(Stack):
         )
                      
         # Create IAM role for EC2 instance
-        ec2Role = iam.Role(self, "StreamlitAppRole-" + entryTimestamp,
-            assumed_by=iam.ServicePrincipal("ec2.amazonaws.com"),
-            managed_policies=[
-                iam.ManagedPolicy.from_aws_managed_policy_name("AmazonSSMManagedInstanceCore")
-            ],
-            inline_policies={
-                "ec2RolePolicies": iam.PolicyDocument(
-                    statements=[
-                        iam.PolicyStatement(
-                            actions=["dynamodb:PutItem", "dynamodb:UpdateItem", "dynamodb:GetItem", "dynamodb:Scan", "dynamodb:Query"],
-                            resources=[
-                                wafrPillarQuestionPromptsTable.table_arn,
-                                wafrRunsTable.table_arn
-                            ],
-                            conditions={
-                                "StringEquals": {
-                                    "aws:ResourceAccount": self.account
-                                }
-                            },
-                            effect=iam.Effect.ALLOW
-                        ),
-                        iam.PolicyStatement(
-                            actions=[
-                                "s3:PutObject",
-                                "s3:GetObject",
-                                "s3:ListBucket"
-                            ],
-                            resources=[
-                                f"arn:aws:s3:::wafr-prompts-{entryTimestamp}/*",
-                                f"arn:aws:s3:::wafr-accelerator-ui-{entryTimestamp}",
-                                f"arn:aws:s3:::wafr-accelerator-ui-{entryTimestamp}/*",
-                                f"arn:aws:s3:::wafr-accelerator-upload-{entryTimestamp}/*"
-                            ],
-                            conditions={
-                                "StringEquals": {
-                                    "aws:ResourceAccount": self.account
-                                }
-                            },
-                            effect=iam.Effect.ALLOW
-                        ),
-                        iam.PolicyStatement(
-                            actions=[
-                                "bedrock:InvokeModel",
-                                "bedrock:InvokeModelWithResponseStream"
-                            ],
-                            resources=[
-                                "arn:aws:bedrock:us-west-2:706769905020:us.deepseek.r1-v1:0"
-                            ],
-                            effect=iam.Effect.ALLOW
-                        ),
-                        iam.PolicyStatement(
-                            actions=[
-                                "bedrock:Retrieve"
-                            ],
-                            resources=[
-                                f"arn:aws:bedrock:{self.region}:{self.account}:knowledge-base/{KB_ID}",
-                                f"arn:aws:bedrock:{self.region}:{self.account}:knowledge-base/{KB_ID}/*"
-                            ],
-                            effect=iam.Effect.ALLOW
-                        ),
-                        *([iam.PolicyStatement(
-                            actions=[
-                                "bedrock:ApplyGuardrail"
-                            ],
-                            resources=[
-                                f"arn:aws:bedrock:{self.region}:{self.account}:guardrail/{GUARDRAIL_ID}"
-                            ],
-                            effect=iam.Effect.ALLOW
-                        )] if GUARDRAIL_ID else []),
-                        #if (optional_features.get("Guardrails", "False") == "True") else [],
-                        iam.PolicyStatement(
-                            actions=[
-                                "sqs:SendMessage",
-                                "sqs:ReceiveMessage",
-                                "sqs:DeleteMessage",
-                                "sqs:GetQueueAttributes",
-                                "sqs:GetQueueUrl"
-                            ],
-                            resources=[
-                                f"arn:aws:sqs:{self.region}:{self.account}:{DEAD_LETTER_QUEUE_UNIQUE_NAME}",
-                                f"arn:aws:sqs:{self.region}:{self.account}:{WAFR_ACCELERATOR_QUEUE_UNIQUE_NAME}"
-                            ],
-                            effect=iam.Effect.ALLOW
-                        ),
-                        iam.PolicyStatement(
-                            actions=[
-                                "ssm:GetParameter",
-                                "ssm:GetParameters",
-                                "ssm:GetParametersByPath",
-                                "ssm:PutParameter",
-                                "ssm:DeleteParameter",
-                                "ssm:DeleteParameters",
-                                "ssm:DescribeParameters",
-                                "ssm:LabelParameterVersion"
-                            ],
-                            resources=[f"arn:aws:ssm:{self.region}:{self.account}:parameter/wafr-accelerator/*"]
-                        ),
-                        iam.PolicyStatement(
-                            actions=[
-                                "textract:StartDocumentAnalysis",
-                                "textract:StartDocumentTextDetection",
-                                "textract:GetDocumentAnalysis",
-                                "textract:GetDocumentTextDetection"
-                            ],
-                            resources=["*"]  
-                        ),
-                        iam.PolicyStatement(
-                            actions=[
-                                "wellarchitected:CreateWorkload",
-                                "wellarchitected:UpdateWorkload",
-                                "wellarchitected:UpdateAnswer",
-                                "wellarchitected:GetAnswer",
-                                "wellarchitected:ListAnswers",
-                                "wellarchitected:ListLensReviewImprovements",
-                                "wellarchitected:ListWorkloads"
-                            ],
-                            resources=["*"]  
-                        )
-                    ]
-                )
-            }
+        ec2Role = iam.Role.from_role_arn(
+            self, 
+            "ExistingStreamlitAppRole-" + entryTimestamp,
+            role_arn="arn:aws:iam::706769905020:role/EC2-Kaizen-Full-Access"
         )
 
         #Reading user_data_script.sh file which contains the linux commands that must be run when the EC2 boots up.
@@ -737,65 +618,10 @@ class WafrGenaiAcceleratorStack(Stack):
             auto_delete_objects=True)
         
         # Create an IAM role for the replaceUITokensFunctionRole Lambda function
-        replaceUITokensFunctionRole = iam.Role(
-            self, "replaceUITokensFunctionRole",
-            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
-            managed_policies=[
-                iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole")
-            ],
-            inline_policies={
-                "replaceUITokensFunctionRolePolicies": iam.PolicyDocument(
-                    statements=[
-                        iam.PolicyStatement(
-                            actions=[
-                                "s3:PutObject",
-                                "s3:GetObject"
-                            ],
-                            resources=[
-                                f"{wafrUIBucket.bucket_arn}/*"
-                            ],
-                            conditions={
-                                "StringEquals": {
-                                    "aws:ResourceAccount": self.account
-                                }
-                            },
-                            effect=iam.Effect.ALLOW
-                        ),
-                        iam.PolicyStatement(
-                            actions=[
-                                "ssm:GetParameter",
-                                "ssm:GetParameters",
-                                "ssm:GetParametersByPath",
-                                "ssm:PutParameter",
-                                "ssm:DeleteParameter",
-                                "ssm:DeleteParameters",
-                                "ssm:DescribeParameters",
-                                "ssm:LabelParameterVersion"
-                            ],
-                            resources=[f"arn:aws:ssm:{self.region}:{self.account}:parameter/wafr-accelerator/*"]
-                        ),
-                         iam.PolicyStatement(
-                            effect=iam.Effect.ALLOW,
-                            actions=[
-                                "ssm:SendCommand",
-                            ],
-                            resources=[
-                                f"arn:aws:ssm:{self.region}::document/AWS-RunShellScript",
-                                f"arn:aws:ec2:{self.region}:{self.account}:instance/{EC2_INSTANCE_ID}"
-                            ]
-                        ),
-                         iam.PolicyStatement(
-                            effect=iam.Effect.ALLOW,
-                            actions=[
-                                "ssm:GetCommandInvocation" 
-                            ],
-                            resources=[
-                                f"arn:aws:ssm:{self.region}:{self.account}:*"
-                            ]
-                        )
-                    ]
-                )
-            }
+        replaceUITokensFunctionRole = iam.Role.from_role_arn(
+            self,
+            "ExistingReplaceUITokensLambdaRole-" + entryTimestamp,
+            role_arn="arn:aws:iam::706769905020:role/Lambda-Full-Access-Role"
         )
         
         replaceUITokensFunction = _lambda.Function(self, "replaceUITokensFunction",
@@ -831,121 +657,10 @@ class WafrGenaiAcceleratorStack(Stack):
         )
                
         # Create an IAM role for the startWafrReviewFunctionRole Lambda function
-        startWafrReviewFunctionRole = iam.Role(
-            self, "startWafrReviewFunctionRoleLambdaRole",
-            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
-            managed_policies=[
-                iam.ManagedPolicy.from_aws_managed_policy_name("service-role/AWSLambdaBasicExecutionRole")
-            ],
-            inline_policies={
-                "startWafrReviewFunctionRolePolicies": iam.PolicyDocument(
-                    statements=[
-                        iam.PolicyStatement(
-                            actions=["dynamodb:PutItem", "dynamodb:UpdateItem", "dynamodb:GetItem", "dynamodb:Scan", "dynamodb:Query"],
-                            resources=[
-                                wafrPillarQuestionPromptsTable.table_arn,
-                                wafrRunsTable.table_arn
-                            ],
-                            conditions={
-                                "StringEquals": {
-                                    "aws:ResourceAccount": self.account
-                                }
-                            },
-                            effect=iam.Effect.ALLOW
-                        ),
-                        iam.PolicyStatement(
-                            actions=[
-                                "s3:PutObject",
-                                "s3:GetObject",
-                                "s3:DeleteObject"
-                            ],
-                            resources=[
-                                f"arn:aws:s3:::wafr-prompts-{entryTimestamp}/*",
-                                f"arn:aws:s3:::wafr-accelerator-upload-{entryTimestamp}/*"
-                            ],
-                            conditions={
-                                "StringEquals": {
-                                    "aws:ResourceAccount": self.account
-                                }
-                            },
-                            effect=iam.Effect.ALLOW
-                        ),
-                        iam.PolicyStatement(
-                            actions=[
-                                "bedrock:InvokeModel",
-                                "bedrock:InvokeModelWithResponseStream"
-                            ],
-                            resources=[
-                                "arn:aws:bedrock:us-west-2:706769905020:us.deepseek.r1-v1:0"
-                            ],
-                            effect=iam.Effect.ALLOW
-                        ),
-                        iam.PolicyStatement(
-                            actions=[
-                                "bedrock:Retrieve"
-                            ],
-                            resources=[
-                                f"arn:aws:bedrock:{self.region}:{self.account}:knowledge-base/{KB_ID}",
-                                f"arn:aws:bedrock:{self.region}:{self.account}:knowledge-base/{KB_ID}/*"
-                            ],
-                            effect=iam.Effect.ALLOW
-                        ),
-                        *([iam.PolicyStatement(
-                            actions=[
-                                "bedrock:ApplyGuardrail"
-                            ],
-                            resources=[
-                                f"arn:aws:bedrock:{self.region}:{self.account}:guardrail/{GUARDRAIL_ID}"
-                            ],
-                            effect=iam.Effect.ALLOW
-                        )] if GUARDRAIL_ID else []),
-                        iam.PolicyStatement(
-                            actions=[
-                                "sqs:SendMessage",
-                                "sqs:ReceiveMessage",
-                                "sqs:DeleteMessage",
-                                "sqs:GetQueueAttributes",
-                                "sqs:GetQueueUrl"
-                            ],
-                            resources=[
-                                f"arn:aws:sqs:{self.region}:{self.account}:{DEAD_LETTER_QUEUE_UNIQUE_NAME}",
-                                f"arn:aws:sqs:{self.region}:{self.account}:{WAFR_ACCELERATOR_QUEUE_UNIQUE_NAME}"
-                            ]
-                        ),
-                        iam.PolicyStatement(
-                            actions=[
-                                "states:StartExecution",
-                                "states:DescribeExecution",
-                                "states:GetExecutionHistory"
-                            ],
-                            resources=[f"arn:aws:states:{self.region}:{self.account}:stateMachine:WAFRReviewStateMachine-{entryTimestamp}"]
-                        ),
-                        iam.PolicyStatement(
-                            actions=[
-                                "textract:StartDocumentAnalysis",
-                                "textract:StartDocumentTextDetection",
-                                "textract:GetDocumentAnalysis",
-                                "textract:GetDocumentTextDetection"
-                            ],
-                            resources=["*"]  
-                        ),
-                        iam.PolicyStatement(
-                            actions=[
-                                "wellarchitected:CreateWorkload",
-                                "wellarchitected:UpdateWorkload",
-                                "wellarchitected:UpdateAnswer",
-                                "wellarchitected:GetAnswer",
-                                "wellarchitected:ListAnswers",
-                                "wellarchitected:ListLensReviewImprovements",
-                                "wellarchitected:ListWorkloads",
-                                "wellarchitected:GetLensReview",
-                                "wellarchitected:CreateMilestone"
-                            ],
-                            resources=["*"]  
-                        )
-                    ]
-                )
-            }
+        startWafrReviewFunctionRole = iam.Role.from_role_arn(
+            self,
+            "ExistingLambdaRole-" + entryTimestamp,
+            role_arn="arn:aws:iam::706769905020:role/Lambda-Full-Access-Role"
         )
         
         #Define Lambda functions
@@ -957,7 +672,7 @@ class WafrGenaiAcceleratorStack(Stack):
             memory_size=512,
             environment={
                 "KNOWLEDGE_BASE_ID": KB_ID,
-                "LLM_MODEL_ID": "us.deepseek.r1-v1:0",
+                "LLM_MODEL_ID": "deepseek.r1-v1:0",
                 "REGION": Stack.of(self).region, 
                 "UPLOAD_BUCKET_NAME": userUploadBucket.bucket_name,
                 "WAFR_ACCELERATOR_RUNS_DD_TABLE_NAME": WAFR_RUNS_TABLE,
@@ -1146,7 +861,7 @@ class WafrGenaiAcceleratorStack(Stack):
             memory_size=512,
             environment={
                 "KNOWLEDGE_BASE_ID": KB_ID,
-                "LLM_MODEL_ID": "us.deepseek.r1-v1:0",
+                "LLM_MODEL_ID": "deepseek.r1-v1:0",
                 "REGION": Stack.of(self).region,
                 "UPLOAD_BUCKET_NAME": userUploadBucket.bucket_name,
                 "WAFR_ACCELERATOR_RUNS_DD_TABLE_NAME": WAFR_RUNS_TABLE,
