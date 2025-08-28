@@ -12,12 +12,12 @@ Base repo: [AWS WAFR With Gen Ai](https://github.com/aws-samples/sample-well-arc
 
 after `activation .venv` & before `cdk bootstrap`
 
-> yum install pip git docker -y
-> curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash -
-> sudo yum install -y nsolid
-> npm install -g aws-cdk
-> sudo systemctl start docker
-> sudo systemctl enable docker
-> sudo usermod -a -G docker ec2-user
-> newgrp docker
-> sudo systemctl status docker
+yum install pip git docker -y
+curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash -
+sudo yum install -y nsolid
+npm install -g aws-cdk
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo usermod -a -G docker ec2-user
+newgrp docker
+sudo systemctl status docker
